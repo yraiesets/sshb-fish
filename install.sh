@@ -23,35 +23,23 @@ echo -e "${BOLD}${CYAN}    SSH Buddy - Installer v2.0${RESET}"
 echo -e "${BOLD}${CYAN}  =====================================${RESET}"
 echo ""
 
-echo -e "${GREEN}[1/6]${RESET} Creating directories..."
+echo -e "${GREEN}[1/5]${RESET} Creating directories..."
 mkdir -p "${INSTALL_DIR}"
 mkdir -p "${SSHB_DIR}"
 mkdir -p "${SYSTEMD_DIR}"
 
-echo -e "${GREEN}[2/6]${RESET} Installing sshb command..."
+echo -e "${GREEN}[2/5]${RESET} Installing sshb command..."
 cp "${SCRIPT_DIR}/sshb" "${INSTALL_DIR}/sshb"
 chmod +x "${INSTALL_DIR}/sshb"
 
-echo -e "${GREEN}[3/6]${RESET} Installing sshb-daemon..."
+echo -e "${GREEN}[3/5]${RESET} Installing sshb-daemon..."
 cp "${SCRIPT_DIR}/sshb-daemon" "${INSTALL_DIR}/sshb-daemon"
 chmod +x "${INSTALL_DIR}/sshb-daemon"
 
-echo -e "${GREEN}[4/6]${RESET} Installing systemd user service..."
+echo -e "${GREEN}[4/5]${RESET} Installing systemd user service..."
 cp "${SCRIPT_DIR}/sshb.service" "${SYSTEMD_DIR}/sshb.service"
 
-echo -e "${GREEN}[5/6]${RESET} Checking PATH..."
-if [[ ":${PATH}:" != *":${INSTALL_DIR}:"* ]]; then
-    local_bin_line='export PATH="${HOME}/.local/bin:${PATH}"'
-    if ! grep -q '.local/bin' "${HOME}/.bashrc" 2>/dev/null; then
-        echo "" >> "${HOME}/.bashrc"
-        echo "# Added by sshb installer" >> "${HOME}/.bashrc"
-        echo "${local_bin_line}" >> "${HOME}/.bashrc"
-        echo -e "  ${YELLOW}Added ${INSTALL_DIR} to PATH in .bashrc${RESET}"
-    fi
-    export PATH="${INSTALL_DIR}:${PATH}"
-fi
-
-echo -e "${GREEN}[6/6]${RESET} Starting sshb daemon service..."
+echo -e "${GREEN}[5/5]${RESET} Starting sshb daemon service..."
 if command -v systemctl &> /dev/null; then
     if command -v loginctl &> /dev/null; then
         loginctl enable-linger "$(whoami)" 2>/dev/null || true
@@ -87,8 +75,6 @@ echo -e "    ${CYAN}sshb help${RESET}          - See all commands"
 echo ""
 echo -e "  To add your buddy to your terminal prompt (with reactions):"
 echo -e "    ${CYAN}sshb install-prompt${RESET}"
-echo ""
-echo -e "  Then run: ${CYAN}source ~/.bashrc${RESET}"
 echo ""
 
 sshb status 2>/dev/null || true

@@ -46,10 +46,15 @@ echo -e "${GREEN}[3/5]${RESET} Removing binaries..."
 rm -f "${INSTALL_DIR}/sshb"
 rm -f "${INSTALL_DIR}/sshb-daemon"
 
-echo -e "${GREEN}[4/5]${RESET} Cleaning up .bashrc..."
+echo -e "${GREEN}[4/5]${RESET} Cleaning up shell config..."
 if grep -q "SSHB-PROMPT-INTEGRATION" "${HOME}/.bashrc" 2>/dev/null; then
     sed -i '/# SSHB-PROMPT-INTEGRATION/,/# END-SSHB-PROMPT-INTEGRATION/d' "${HOME}/.bashrc"
     echo -e "  ${GREEN}Removed prompt integration from .bashrc${RESET}"
+fi
+FISH_CONFIG="${HOME}/.config/fish/config.fish"
+if grep -q "SSHB-PROMPT-INTEGRATION" "${FISH_CONFIG}" 2>/dev/null; then
+    sed -i '/# SSHB-PROMPT-INTEGRATION/,/# END-SSHB-PROMPT-INTEGRATION/d' "${FISH_CONFIG}"
+    echo -e "  ${GREEN}Removed prompt integration from config.fish${RESET}"
 fi
 
 echo -e "${GREEN}[5/5]${RESET} Removing pet data..."
@@ -64,5 +69,5 @@ fi
 
 echo ""
 echo -e "${GREEN}${BOLD}  SSH Buddy has been uninstalled.${RESET}"
-echo -e "  Run ${CYAN}source ~/.bashrc${RESET} to refresh your terminal."
+echo -e "  Restart your terminal to apply changes."
 echo ""
