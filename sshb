@@ -1437,7 +1437,7 @@ cmd_help() {
     echo -e "  ${BOLD}Info Commands:${RESET}"
     echo -e "    ${CYAN}status${RESET}       Show full status panel"
     echo -e "    ${CYAN}mini${RESET}         Show compact status"
-    echo -e "    ${CYAN}prompt${RESET}       One-line status for bash prompt"
+    echo -e "    ${CYAN}prompt${RESET}       One-line status for terminal prompt"
     echo -e "    ${CYAN}interactive${RESET}  Launch interactive mode"
     echo ""
     echo -e "  ${BOLD}Management:${RESET}"
@@ -1472,12 +1472,16 @@ cmd_install_prompt() {
     cat >> "${fish_file}" << 'FISHEOF'
 # SSHB-PROMPT-INTEGRATION - SSH Buddy Tamagotchi prompt
 # Shows pet status in right prompt and reacts to command success/failure
-if command -v sshb > /dev/null 2>&1
-    function __sshb_postexec --on-event fish_postexec
-        set -l last_exit $status
+# Note: functions are defined unconditionally so they survive conf.d load order
+# (PATH including ~/.local/bin is not yet set when conf.d files run)
+function __sshb_postexec --on-event fish_postexec
+    set -l last_exit $status
+    if type -q sshb
         sshb react $last_exit $argv[1] 2>/dev/null
     end
-    function fish_right_prompt
+end
+function fish_right_prompt
+    if type -q sshb
         sshb prompt 2>/dev/null
     end
 end

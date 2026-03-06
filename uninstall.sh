@@ -47,14 +47,10 @@ rm -f "${INSTALL_DIR}/sshb"
 rm -f "${INSTALL_DIR}/sshb-daemon"
 
 echo -e "${GREEN}[4/5]${RESET} Cleaning up shell config..."
-if grep -q "SSHB-PROMPT-INTEGRATION" "${HOME}/.bashrc" 2>/dev/null; then
-    sed -i '/# SSHB-PROMPT-INTEGRATION/,/# END-SSHB-PROMPT-INTEGRATION/d' "${HOME}/.bashrc"
-    echo -e "  ${GREEN}Removed prompt integration from .bashrc${RESET}"
-fi
-FISH_CONFIG="${HOME}/.config/fish/config.fish"
-if grep -q "SSHB-PROMPT-INTEGRATION" "${FISH_CONFIG}" 2>/dev/null; then
-    sed -i '/# SSHB-PROMPT-INTEGRATION/,/# END-SSHB-PROMPT-INTEGRATION/d' "${FISH_CONFIG}"
-    echo -e "  ${GREEN}Removed prompt integration from config.fish${RESET}"
+FISH_CONF="${HOME}/.config/fish/conf.d/sshb.fish"
+if [[ -f "${FISH_CONF}" ]]; then
+    rm -f "${FISH_CONF}"
+    echo -e "  ${GREEN}Removed prompt integration (conf.d/sshb.fish)${RESET}"
 fi
 
 echo -e "${GREEN}[5/5]${RESET} Removing pet data..."
