@@ -25,7 +25,7 @@ background service, so check in regularly or face the consequences.
 
 ## New Features
 - Added Blackjack
-- Adding quips about previous command state by hooking ```$?``` exit code, and the last command via history
+- Adding quips about previous command state by hooking ```$?``` exit code, and the last command via ```history```
 
 ```
   /\_/\
