@@ -1,3 +1,5 @@
+![](https://github-view-counter.vercel.app/api?username=C-GBL=sshb&label=Views)
+
 # sshb - SSH Buddy
 
 A Tamagotchi-style virtual pet that lives in your terminal. Take care of your
