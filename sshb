@@ -1444,8 +1444,8 @@ cmd_help() {
     echo -e "    ${CYAN}rename${RESET} <n>   Rename your buddy"
     echo -e "    ${CYAN}revive${RESET}       Revive a dead buddy"
     echo -e "    ${CYAN}reset${RESET}        Start over with a new buddy"
-    echo -e "    ${CYAN}install-prompt${RESET}    Add buddy to your bash prompt"
-    echo -e "    ${CYAN}uninstall-prompt${RESET}  Remove buddy from bash prompt"
+    echo -e "    ${CYAN}install-prompt${RESET}    Add buddy to your fish prompt"
+    echo -e "    ${CYAN}uninstall-prompt${RESET}  Remove buddy from fish prompt"
     echo -e "    ${CYAN}version${RESET}      Show version info"
     echo -e "    ${CYAN}help${RESET}         Show this help message"
     echo ""
@@ -1453,61 +1453,52 @@ cmd_help() {
     echo -e "    When prompt integration is active, your buddy will react to"
     echo -e "    your commands - roasting failures and praising successes."
     echo -e "    Knows: make, docker, git, npm, pip, ssh, python, cargo"
+    echo -e "    Uses fish_right_prompt and fish_postexec (Fish shell)"
     echo ""
 }
 
 cmd_install_prompt() {
-    local bashrc="${HOME}/.bashrc"
+    local fish_conf_dir="${HOME}/.config/fish/conf.d"
+    local fish_file="${fish_conf_dir}/sshb.fish"
     local marker="# SSHB-PROMPT-INTEGRATION"
 
-    if grep -q "${marker}" "${bashrc}" 2>/dev/null; then
-        echo -e "${YELLOW}SSH Buddy prompt is already installed in your .bashrc${RESET}"
+    if grep -q "${marker}" "${fish_file}" 2>/dev/null; then
+        echo -e "${YELLOW}SSH Buddy prompt is already installed in your Fish config${RESET}"
         return 0
     fi
 
-    cat >> "${bashrc}" << 'BASHEOF'
+    mkdir -p "${fish_conf_dir}"
 
+    cat >> "${fish_file}" << 'FISHEOF'
 # SSHB-PROMPT-INTEGRATION - SSH Buddy Tamagotchi prompt
-# Shows pet status in prompt and reacts to command success/failure
-if command -v sshb &> /dev/null; then
-    __sshb_last_exit=0
-    __sshb_prompt() {
-        __sshb_last_exit=$?
-        local last_cmd
-        last_cmd=$(HISTTIMEFORMAT= history 1 | sed 's/^[[:space:]]*[0-9]*[[:space:]]*//')
-        # Show reaction to previous command (if any)
-        if [[ -n "${last_cmd}" ]]; then
-            sshb react "${__sshb_last_exit}" "${last_cmd}" 2>/dev/null
-        fi
-        local sshb_status
-        sshb_status=$(sshb prompt 2>/dev/null)
-        if [[ -n "${sshb_status}" ]]; then
-            PS1="${sshb_status} \[\033[1;32m\]\u@\h\[\033[0m\]:\[\033[1;34m\]\w\[\033[0m\]\$ "
-        else
-            PS1="\[\033[1;32m\]\u@\h\[\033[0m\]:\[\033[1;34m\]\w\[\033[0m\]\$ "
-        fi
-    }
-    PROMPT_COMMAND="__sshb_prompt"
-fi
+# Shows pet status in right prompt and reacts to command success/failure
+if command -v sshb > /dev/null 2>&1
+    function __sshb_postexec --on-event fish_postexec
+        set -l last_exit $status
+        sshb react $last_exit $argv[1] 2>/dev/null
+    end
+    function fish_right_prompt
+        sshb prompt 2>/dev/null
+    end
+end
 # END-SSHB-PROMPT-INTEGRATION
-BASHEOF
+FISHEOF
 
-    echo -e "${GREEN}SSH Buddy prompt installed! Run 'source ~/.bashrc' or open a new terminal.${RESET}"
-    echo -e "${DIM}Your prompt will now show ${PET_NAME}'s status and reactions.${RESET}"
+    echo -e "${GREEN}SSH Buddy prompt installed! Open a new terminal or run 'source ~/.config/fish/conf.d/sshb.fish'.${RESET}"
+    echo -e "${DIM}Your right prompt will now show ${PET_NAME}'s status and reactions.${RESET}"
 }
 
 cmd_uninstall_prompt() {
-    local bashrc="${HOME}/.bashrc"
+    local fish_file="${HOME}/.config/fish/conf.d/sshb.fish"
     local start_marker="# SSHB-PROMPT-INTEGRATION"
-    local end_marker="# END-SSHB-PROMPT-INTEGRATION"
 
-    if ! grep -q "${start_marker}" "${bashrc}" 2>/dev/null; then
-        echo -e "${YELLOW}SSH Buddy prompt is not installed in your .bashrc${RESET}"
+    if [[ ! -f "${fish_file}" ]] || ! grep -q "${start_marker}" "${fish_file}" 2>/dev/null; then
+        echo -e "${YELLOW}SSH Buddy prompt is not installed in your Fish config${RESET}"
         return 0
     fi
 
-    sed -i "/${start_marker}/,/${end_marker}/d" "${bashrc}"
-    echo -e "${GREEN}SSH Buddy prompt removed. Run 'source ~/.bashrc' or open a new terminal.${RESET}"
+    rm -f "${fish_file}"
+    echo -e "${GREEN}SSH Buddy prompt removed. Open a new terminal to apply changes.${RESET}"
 }
 
 cmd_version() {
