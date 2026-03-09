@@ -6,7 +6,8 @@
 # Take care of your buddy between sessions - feed it, play with it,
 # let it sleep, and keep it happy and healthy.
 #
-# v2.0 - Now with blackjack and your cat roasts your failed commands.
+# v2.0.1 - Fixed blackjack: cards now properly random (subshell bug fix)
+# v2.0   - Now with blackjack and your cat roasts your failed commands.
 # ===========================================================================
 
 set -euo pipefail
@@ -15,7 +16,7 @@ SSHB_DIR="${HOME}/.sshb"
 STATE_FILE="${SSHB_DIR}/state"
 LOG_FILE="${SSHB_DIR}/sshb.log"
 LOCK_FILE="${SSHB_DIR}/sshb.lock"
-VERSION="2.0.0"
+VERSION="2.0.1"
 
 # ---------------------------------------------------------------------------
 # Color definitions
@@ -557,12 +558,32 @@ cmd_feed() {
 # ===========================================================================
 # BLACKJACK - Play a hand with your cat
 # ===========================================================================
-
+# NOTE: Card drawing uses a global variable (BJ_DRAWN_CARD) instead of
+# echoing + command substitution. This is because $(bj_draw) runs in a
+# subshell, and any modifications to BJ_DECK would be lost when the
+# subshell exits - causing every card to be the same!
+#
 # Card values: 1-13 map to A,2,3,4,5,6,7,8,9,10,J,Q,K
 # Suits: 0=Spades, 1=Hearts, 2=Diamonds, 3=Clubs
 BJ_DECK=()
+BJ_DECK_POS=0
 BJ_PLAYER_HAND=()
 BJ_DEALER_HAND=()
+BJ_DRAWN_CARD=""
+
+# ---------------------------------------------------------------------------
+# Seed RANDOM from /dev/urandom for better entropy
+# ---------------------------------------------------------------------------
+bj_seed_random() {
+    local seed
+    if [[ -r /dev/urandom ]]; then
+        seed=$(od -An -tu4 -N4 /dev/urandom | tr -d ' ')
+    else
+        # Fallback: combine multiple entropy sources
+        seed=$(( $(date +%s%N 2>/dev/null || date +%s) ^ $$ ^ RANDOM ))
+    fi
+    RANDOM=${seed}
+}
 
 bj_card_name() {
     local card=$1
@@ -624,12 +645,17 @@ bj_hand_value() {
 }
 
 bj_shuffle() {
+    # Seed with good entropy before each shuffle
+    bj_seed_random
+    
     BJ_DECK=()
+    BJ_DECK_POS=0
     local i
     for (( i=0; i<52; i++ )); do
         BJ_DECK+=("${i}")
     done
-    # Fisher-Yates shuffle
+    
+    # Fisher-Yates shuffle with properly seeded RANDOM
     local n=${#BJ_DECK[@]}
     for (( i=n-1; i>0; i-- )); do
         local j=$(( RANDOM % (i + 1) ))
@@ -640,12 +666,13 @@ bj_shuffle() {
 }
 
 bj_draw() {
-    if (( ${#BJ_DECK[@]} == 0 )); then
+    # Reshuffle if we've gone through the deck
+    if (( BJ_DECK_POS >= ${#BJ_DECK[@]} )) || (( ${#BJ_DECK[@]} == 0 )); then
         bj_shuffle
     fi
-    local card="${BJ_DECK[0]}"
-    BJ_DECK=("${BJ_DECK[@]:1}")
-    echo "${card}"
+    # Set global variable instead of echoing (avoids subshell state loss)
+    BJ_DRAWN_CARD="${BJ_DECK[$BJ_DECK_POS]}"
+    BJ_DECK_POS=$(( BJ_DECK_POS + 1 ))
 }
 
 bj_render_card() {
@@ -847,11 +874,11 @@ cmd_play() {
     BJ_PLAYER_HAND=()
     BJ_DEALER_HAND=()
 
-    # Deal two cards each
-    BJ_PLAYER_HAND+=("$(bj_draw)")
-    BJ_DEALER_HAND+=("$(bj_draw)")
-    BJ_PLAYER_HAND+=("$(bj_draw)")
-    BJ_DEALER_HAND+=("$(bj_draw)")
+    # Deal two cards each (using global BJ_DRAWN_CARD to avoid subshell)
+    bj_draw; BJ_PLAYER_HAND+=("${BJ_DRAWN_CARD}")
+    bj_draw; BJ_DEALER_HAND+=("${BJ_DRAWN_CARD}")
+    bj_draw; BJ_PLAYER_HAND+=("${BJ_DRAWN_CARD}")
+    bj_draw; BJ_DEALER_HAND+=("${BJ_DRAWN_CARD}")
 
     local p_val d_val
     p_val=$(bj_hand_value BJ_PLAYER_HAND)
@@ -891,7 +918,7 @@ cmd_play() {
 
         case "${action}" in
             h|H)
-                BJ_PLAYER_HAND+=("$(bj_draw)")
+                bj_draw; BJ_PLAYER_HAND+=("${BJ_DRAWN_CARD}")
                 p_val=$(bj_hand_value BJ_PLAYER_HAND)
                 if (( p_val > 21 )); then
                     clear
@@ -925,7 +952,7 @@ cmd_play() {
     # Dealer turn
     d_val=$(bj_hand_value BJ_DEALER_HAND)
     while (( d_val < 17 )); do
-        BJ_DEALER_HAND+=("$(bj_draw)")
+        bj_draw; BJ_DEALER_HAND+=("${BJ_DRAWN_CARD}")
         d_val=$(bj_hand_value BJ_DEALER_HAND)
     done
 
